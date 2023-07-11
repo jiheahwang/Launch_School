@@ -1,1 +1,0 @@
-puts "Ji Hea " + "Hwang"
