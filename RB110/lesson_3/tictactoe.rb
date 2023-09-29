@@ -29,35 +29,35 @@ def display_game_explanation
   screen_clear
   puts <<-HEREDOC
   Let's play Tic Tac Toe!
-  
+
   Here are the rules:
   - Match will continue until either you or computer reaches 3 wins.
   - You will also get to choose who goes first for the first game.
     After the first game, the first move will alternate between players.
-  
+
   Press Enter to continue and choose who goes first.
   HEREDOC
-  
+
   gets
 end
 
 # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-def display_board(board, square_numbers, score)
+def display_board(board, score)
   screen_clear
   puts "MARKERS - You : 'X',  Computer: 'O'"
   puts "SCORE   - You :  #{score['Player']} ,  Computer : #{score['Computer']}"
   puts ""
   puts "     |     |"
   puts "  #{board[7]}  |  #{board[8]}  |  #{board[9]}  "
-  puts "    #{square_numbers[6]}|    #{square_numbers[7]}|    #{square_numbers[8]}"
+  puts "    #{square_number(board, 7)}|    #{square_number(board, 8)}|    #{square_number(board, 9)}"
   puts "-----+-----+-----"
   puts "     |     |"
   puts "  #{board[4]}  |  #{board[5]}  |  #{board[6]}  "
-  puts "    #{square_numbers[3]}|    #{square_numbers[4]}|    #{square_numbers[5]}"
+  puts "    #{square_number(board, 4)}|    #{square_number(board, 5)}|    #{square_number(board, 6)}"
   puts "-----+-----+-----"
   puts "     |     |"
   puts "  #{board[1]}  |  #{board[2]}  |  #{board[3]}  "
-  puts "    #{square_numbers[0]}|    #{square_numbers[1]}|    #{square_numbers[2]}"
+  puts "    #{square_number(board, 1)}|    #{square_number(board, 2)}|    #{square_number(board, 3)}"
   puts ""
 end
 # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
@@ -90,15 +90,15 @@ end
 # getting user input
 def determine_first_player
   screen_clear
-  
+
   puts <<-HEREDOC
   Choose one (enter 1, 2, or 3)
-  
+
   1. I will make the first move.
   2. Computer can make the first move.
   3. Randomly choose who gets to go first.
   HEREDOC
-  
+
   choice = ""
 
   loop do
@@ -130,10 +130,8 @@ def empty_squares(board)
   board.keys.select { |num| board[num] == INITIAL_MARKER }
 end
 
-def update_square_numbers!(board, square_numbers)
-  square_numbers.map! do |num|
-    empty_squares(board).include?(num) ? num : " "
-  end
+def square_number(board, number)
+  board[number] == INITIAL_MARKER ? number : ' '
 end
 
 def detect_square_to_win(board, marker)
@@ -232,26 +230,25 @@ def alternate_player(current_player)
   current_player == "Player" ? "Computer" : "Player"
 end
 
-def fill_board_until_winner(board, square_numbers, score, current_player)
+def fill_board_until_winner(board, score, current_player)
   loop do
-    display_board(board, square_numbers, score)
+    display_board(board, score)
     sleep 0.5
     place_piece!(board, current_player)
-    update_square_numbers!(board, square_numbers)
     current_player = alternate_player(current_player)
     break if someone_won?(board) || board_full?(board)
   end
 end
 
-def play_one_round(board, square_numbers, score, current_player)
-  fill_board_until_winner(board, square_numbers, score, current_player)
+def play_one_round(board, score, current_player)
+  fill_board_until_winner(board, score, current_player)
 
-  display_board(board, square_numbers, score)
+  display_board(board, score)
 
   if someone_won?(board)
     winner = detect_winner(board)
     update_score!(winner, score)
-    display_board(board, square_numbers, score)
+    display_board(board, score)
     prompt "#{winner} won!"
   else
     prompt "It's a tie!"
@@ -267,8 +264,7 @@ loop do
 
   loop do
     board = initialize_board
-    square_numbers = board.keys
-    play_one_round(board, square_numbers, score, first_move_player)
+    play_one_round(board, score, first_move_player)
     first_move_player = alternate_player(first_move_player)
 
     if grand_winner?(score)
