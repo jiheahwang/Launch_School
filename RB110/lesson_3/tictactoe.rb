@@ -8,6 +8,8 @@ INITIAL_MARKER = ' '
 PLAYER_MARKER = 'X'
 COMPUTER_MARKER = 'O'
 
+CENTER_SQUARE = 5
+
 FIRST_MOVE_CHOICE = {
   "1" => "Player",
   "2" => "Computer",
@@ -25,32 +27,37 @@ end
 
 def display_game_explanation
   screen_clear
-  prompt "Let's play Tic Tac Toe! Here are the rules:"
-  puts "  - Match will continue until either you or computer reaches 3 wins."
-  puts "  - You will also get to choose who goes first for the first game.
-    After the first game, the first move will alternate between players."
-  puts ""
-  prompt "Press Enter to continue and choose who goes first"
+  puts <<-HEREDOC
+  Let's play Tic Tac Toe!
+  
+  Here are the rules:
+  - Match will continue until either you or computer reaches 3 wins.
+  - You will also get to choose who goes first for the first game.
+    After the first game, the first move will alternate between players.
+  
+  Press Enter to continue and choose who goes first.
+  HEREDOC
+  
   gets
 end
 
 # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-def display_board(board, score)
+def display_board(board, square_numbers, score)
   screen_clear
   puts "MARKERS - You : 'X',  Computer: 'O'"
   puts "SCORE   - You :  #{score['Player']} ,  Computer : #{score['Computer']}"
   puts ""
   puts "     |     |"
-  puts "  #{board[7][0]}  |  #{board[8][0]}  |  #{board[9][0]}  "
-  puts "    #{board[7][1]}|    #{board[8][1]}|    #{board[9][1]}"
+  puts "  #{board[7]}  |  #{board[8]}  |  #{board[9]}  "
+  puts "    #{square_numbers[6]}|    #{square_numbers[7]}|    #{square_numbers[8]}"
   puts "-----+-----+-----"
   puts "     |     |"
-  puts "  #{board[4][0]}  |  #{board[5][0]}  |  #{board[6][0]}  "
-  puts "    #{board[4][1]}|    #{board[5][1]}|    #{board[6][1]}"
+  puts "  #{board[4]}  |  #{board[5]}  |  #{board[6]}  "
+  puts "    #{square_numbers[3]}|    #{square_numbers[4]}|    #{square_numbers[5]}"
   puts "-----+-----+-----"
   puts "     |     |"
-  puts "  #{board[1][0]}  |  #{board[2][0]}  |  #{board[3][0]}  "
-  puts "    #{board[1][1]}|    #{board[2][1]}|    #{board[3][1]}"
+  puts "  #{board[1]}  |  #{board[2]}  |  #{board[3]}  "
+  puts "    #{square_numbers[0]}|    #{square_numbers[1]}|    #{square_numbers[2]}"
   puts ""
 end
 # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
@@ -83,11 +90,15 @@ end
 # getting user input
 def determine_first_player
   screen_clear
-  prompt "Choose one (enter 1, 2, or 3)."
-  puts "    1. I will make the first move."
-  puts "    2. Computer can make the first move."
-  puts "    3. Randomly choose who gets to go first."
-
+  
+  puts <<-HEREDOC
+  Choose one (enter 1, 2, or 3)
+  
+  1. I will make the first move.
+  2. Computer can make the first move.
+  3. Randomly choose who gets to go first.
+  HEREDOC
+  
   choice = ""
 
   loop do
@@ -111,18 +122,24 @@ end
 # board and squares
 def initialize_board
   new_board = {}
-  (1..9).each { |num| new_board[num] = [INITIAL_MARKER, num] }
+  (1..9).each { |num| new_board[num] = INITIAL_MARKER }
   new_board
 end
 
 def empty_squares(board)
-  board.keys.select { |num| board[num][0] == INITIAL_MARKER }
+  board.keys.select { |num| board[num] == INITIAL_MARKER }
+end
+
+def update_square_numbers!(board, square_numbers)
+  square_numbers.map! do |num|
+    empty_squares(board).include?(num) ? num : " "
+  end
 end
 
 def detect_square_to_win(board, marker)
   WINNING_LINES.map do |line|
-    if line.map { |num| board[num][0] }.count(marker) == 2
-      line.find { |num| board[num][0] == INITIAL_MARKER }
+    if line.map { |num| board[num] }.count(marker) == 2
+      line.find { |num| board[num] == INITIAL_MARKER }
     end
   end.compact.sample
 end
@@ -134,9 +151,9 @@ end
 
 def detect_winner(board)
   WINNING_LINES.each do |line|
-    if (line.map { |num| board[num][0] }).all?(PLAYER_MARKER)
+    if (line.map { |num| board[num] }).all?(PLAYER_MARKER)
       return 'Player'
-    elsif (line.map { |num| board[num][0] }).all?(COMPUTER_MARKER)
+    elsif (line.map { |num| board[num] }).all?(COMPUTER_MARKER)
       return 'Computer'
     end
   end
@@ -186,7 +203,7 @@ end
 # play actions and related
 def player_places_piece!(board)
   square = get_player_marker_choice(board)
-  board[square] = [PLAYER_MARKER, " "]
+  board[square] = PLAYER_MARKER
 end
 
 def computer_places_piece!(board)
@@ -197,10 +214,10 @@ def computer_places_piece!(board)
   end
 
   if !square
-    square = empty_squares(board).include?(5) ? 5 : empty_squares(board).sample
+    square = empty_squares(board).include?(CENTER_SQUARE) ? CENTER_SQUARE : empty_squares(board).sample
   end
 
-  board[square] = [COMPUTER_MARKER, " "]
+  board[square] = COMPUTER_MARKER
 end
 
 def place_piece!(board, current_player)
@@ -215,25 +232,26 @@ def alternate_player(current_player)
   current_player == "Player" ? "Computer" : "Player"
 end
 
-def fill_board_until_winner(board, score, current_player)
+def fill_board_until_winner(board, square_numbers, score, current_player)
   loop do
-    display_board(board, score)
+    display_board(board, square_numbers, score)
     sleep 0.5
     place_piece!(board, current_player)
+    update_square_numbers!(board, square_numbers)
     current_player = alternate_player(current_player)
     break if someone_won?(board) || board_full?(board)
   end
 end
 
-def play_one_round(board, score, current_player)
-  fill_board_until_winner(board, score, current_player)
+def play_one_round(board, square_numbers, score, current_player)
+  fill_board_until_winner(board, square_numbers, score, current_player)
 
-  display_board(board, score)
+  display_board(board, square_numbers, score)
 
   if someone_won?(board)
     winner = detect_winner(board)
     update_score!(winner, score)
-    display_board(board, score)
+    display_board(board, square_numbers, score)
     prompt "#{winner} won!"
   else
     prompt "It's a tie!"
@@ -249,7 +267,8 @@ loop do
 
   loop do
     board = initialize_board
-    play_one_round(board, score, first_move_player)
+    square_numbers = board.keys
+    play_one_round(board, square_numbers, score, first_move_player)
     first_move_player = alternate_player(first_move_player)
 
     if grand_winner?(score)
