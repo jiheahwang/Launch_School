@@ -82,7 +82,7 @@ def display_only_one_dealer_card(card)
   print "|#{card[:rank].ljust(5)}| |     |"
   puts ""
   print "|#{SUITS[card[:suit]][:unicode].center(5)}| |  ?  |"
-  puts
+  puts ""
   print "|#{card[:rank].rjust(5)}| |     |"
   puts ""
   puts "+-----+ +-----+"
@@ -96,7 +96,7 @@ def display_cards(cards)
   cards.each { |card| print "|#{SUITS[card[:suit]][:unicode].center(5)}| " }
   puts ""
   cards.each { |card| print "|#{card[:rank].rjust(5)}| " }
-  puts
+  puts ""
   puts "+-----+ " * cards.size
 end
 # rubocop:enable Metrics/AbcSize
