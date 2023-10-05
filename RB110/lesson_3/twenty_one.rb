@@ -276,6 +276,7 @@ def perform_end_of_round_actions(player, dealer)
   screen_clear
   display_game_screen(player, dealer)
   display_result_message(winner)
+  sleep 1
 end
 
 # gameplay - turns
@@ -330,7 +331,6 @@ loop do
     play_player_turn(deck, player, dealer)
     play_dealer_turn(deck, player, dealer) unless player[:busted]
     perform_end_of_round_actions(player, dealer)
-    sleep 1
 
     if grand_winner?(player[:score], dealer[:score])
       grand_winner = detect_grand_winner(player[:score], dealer[:score])
