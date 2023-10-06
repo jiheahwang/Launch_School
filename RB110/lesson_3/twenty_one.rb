@@ -17,8 +17,8 @@ DEALER_STAY_MIN = 17
 MAX_ALLOWED_VALUE = 21
 
 PLAYER_CHOICES = {
-  hit_or_stay: { 1 => "Hit", 2 => "Stay" },
-  play_again: { 1 => true, 2 => false }
+  hit_or_stay: { ["1", "h", "hit"] => "Hit", ["2", "s", "stay"] => "Stay" },
+  play_again: { ["1", "y", "yes"] => true, ["2", "n", "no"] => false }
 }
 
 GRAND_WINNING_SCORE = 5
@@ -56,7 +56,18 @@ Press Enter to play.
   gets
 end
 
+def display_banner_and_scoreboard(player_score, dealer_score)
+  puts <<-BANNER_AND_SCOREBOARD
+***||Welcome to the Game of #{MAX_ALLOWED_VALUE}||***
+===================================
+|SCORE|  You : #{player_score}   |  Dealer : #{dealer_score}  |
+===================================
+  BANNER_AND_SCOREBOARD
+end
+
 def display_game_screen(player, dealer)
+  display_banner_and_scoreboard(player[:score], dealer[:score])
+
   if player_turn_ended?(player)
     display_cards(dealer[:cards])
   else
@@ -67,10 +78,8 @@ def display_game_screen(player, dealer)
 
   puts <<-STATUS_DISPLAY
 Dealer Cards (Current Hand Total: #{dealer_total})
-# of Wins: #{dealer[:score]}
 
 
-# of Wins: #{player[:score]}
 Your Cards (Current Hand Total: #{player[:total]})
   STATUS_DISPLAY
   display_cards(player[:cards])
@@ -121,6 +130,12 @@ def display_next_round_prompt
   gets
 end
 
+def display_lets_play_again
+  puts ""
+  prompt "Let's play again! Press Enter to continue."
+  gets
+end
+
 def display_goodbye_message
   prompt "Thank you for playing #{MAX_ALLOWED_VALUE}. Goodbye!"
 end
@@ -128,17 +143,24 @@ end
 # getting user input
 def get_valid_player_choice(question_category)
   loop do
-    player_choice = gets.chomp
-    if valid_input?(player_choice)
-      return PLAYER_CHOICES[question_category][player_choice.to_i]
+    player_choice = gets.chomp.downcase
+    if valid_input?(player_choice, question_category)
+      PLAYER_CHOICES[question_category].each do |key, value|
+        return value if key.include?(player_choice)
+      end
     end
-    prompt "Sorry, invalid answer. Please choose 1 or 2."
+    choice_words = []
+    PLAYER_CHOICES[question_category].each_key do |key|
+      choice_words << key.last
+    end
+    choice_words = choice_words.join(', or ')
+    prompt "Sorry, invalid answer. Please enter 1, 2, #{choice_words}."
   end
 end
 
 def hit_or_stay_choice
   puts <<-HIT_OR_STAY
-=> Hit or Stay? (Enter 1 or 2)
+=> Hit or Stay?
    1. Hit
    2. Stay
     HIT_OR_STAY
@@ -147,8 +169,8 @@ def hit_or_stay_choice
 end
 
 # checks returning booleans
-def valid_input?(input)
-  input == input.to_i.to_s && (1..2).include?(input.to_i)
+def valid_input?(input, question_category)
+  PLAYER_CHOICES[question_category].keys.flatten.include?(input)
 end
 
 def busted?(total)
@@ -161,7 +183,7 @@ end
 
 def play_again?
   puts <<-ASK_PLAY_AGAIN
-=> Play Again? (Enter 1 or 2)
+=> Play Again?
    1. Yes
    2. No
   ASK_PLAY_AGAIN
@@ -340,7 +362,7 @@ loop do
     display_next_round_prompt
   end
 
-  break unless play_again?
+  play_again? ? display_lets_play_again : break
 end
 
 display_goodbye_message
