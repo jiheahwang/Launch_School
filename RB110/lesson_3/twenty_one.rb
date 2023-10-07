@@ -362,7 +362,8 @@ loop do
     display_next_round_prompt
   end
 
-  play_again? ? display_lets_play_again : break
+  break unless play_again?
+  display_lets_play_again
 end
 
 display_goodbye_message
