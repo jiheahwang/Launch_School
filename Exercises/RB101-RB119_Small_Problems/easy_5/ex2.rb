@@ -1,7 +1,17 @@
-def time_of_day(int)
-  hours, minutes = int.divmod(60)
-  hours = hours % 24
-  "#{'%02d' % hours}:#{'%02d' % minutes}"
+# The time of day can be represented as the number of minutes before or after midnight. If the number of minutes is positive, the time is after midnight. If the number of minutes is negative, the time is before midnight.
+
+# Write a method that takes a time using this minute-based format and returns the time of day in 24 hour format (hh:mm). Your method should work with any integer input.
+
+# You may not use ruby's Date and Time classes.
+
+# Disregard Daylight Savings and Standard Time and other complications.
+
+MINUTES_PER_HOUR = 60
+MINUTES_PER_DAY = 1440
+
+def time_of_day(minutes)
+  hour, minute = (minutes % MINUTES_PER_DAY).divmod(MINUTES_PER_HOUR)
+  "#{'%02d' % hour}:#{'%02d' %  minute}"
 end
 
 p time_of_day(0) == "00:00"
