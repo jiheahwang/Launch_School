@@ -91,14 +91,10 @@ Your Cards (Current Hand Total: #{player.hand_total})
     gets
   end
 
-  # TODO: choose one
   def display_play_again_message
     puts ""
     puts "Let's play again! Press Enter to continue."
     gets
-
-    # puts "Let's play again!"
-    # 2.times { pause }
   end
 
   def display_goodbye_message
