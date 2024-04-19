@@ -64,8 +64,8 @@ module TwentyOneDisplay
     dealer_total = dealer_card_reveal ? dealer.hand_total : "?"
     puts <<-HAND_TOTAL_DISPLAY
 Dealer Cards (Current Hand Total: #{dealer_total})
-#{'  '}
-#{'  '}
+
+
 Your Cards (Current Hand Total: #{player.hand_total})
     HAND_TOTAL_DISPLAY
   end
