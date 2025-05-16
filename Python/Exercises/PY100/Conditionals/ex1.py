@@ -1,0 +1,1 @@
+# falsy values in Python: False, 0, None, empty collections

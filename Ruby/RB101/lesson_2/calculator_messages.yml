@@ -1,0 +1,40 @@
+en:
+  welcome: "Welcome to Calculator! Enter your name:"
+  greeting: "Hello, %{name}"
+  valid_name: "Make sure to enter a valid name."
+  first_number: "What's the first number?"
+  invalid_number: "Hmm... that doesn't look like a valid number. Please enter again."
+  second_number: "What's the second number?"
+  operator_prompt: "What operation would you like to perform? \n
+      1) add \n
+      2) subtract \n
+      3) multiply \n
+      4) divide"
+  choose1234: "Must choose 1, 2, 3 or 4"
+  '1': "Adding the two numbers..."
+  '2': "Subtracting the two numbers..."
+  '3': "Multiplying the two numbers..."
+  '4': "Dividing the two numbers..."
+  result: "The result is %{result}"
+  calculate_again: "Do you want to perform another calculation? (Y to calculate again)"
+  goodbye: "Thank you for using the calculator. Good bye!"
+kr:
+  welcome: "환영합니다! 이름을 입력하세요:"
+  greeting: "안녕하세요 %{name}님"
+  valid_name: "이름을 정확히 입력해 주세요."
+  first_number: "첫번째 숫자를 입력하세요"
+  invalid_number: "음.. 이건 숫자가 아닌데요. 다시 입력해 주세요."
+  second_number: "두번째 숫자를 입력하세요"
+  operator_prompt: "어떤 계산을 하고 싶으세요? \n
+      1) 더하기 \n
+      2) 빼기 \n
+      3) 곱하기 \n
+      4) 나누기"
+  choose1234: "1, 2, 3, 4 중에 골라주세요"
+  '1': "두 숫자를 더하는 중..."
+  '2': "두 숫자를 빼는 중..."
+  '3': "두 숫자를 곱하는 중..."
+  '4': "두 숫자를 나누는 중..."
+  result: "계산 결과는 %{result} 입니다"
+  calculate_again: "계산을 다시 할까요? (다시 하려면 Y)"
+  goodbye: "계산기를 이용해 주셔서 감사합니다. 그럼 이만 안녕히!"
