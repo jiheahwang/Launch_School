@@ -26,6 +26,14 @@ RULES_TABLE_WIDTH = 39
 WINNING_MOVE_FIELD_WIDTH = 8
 LOSING_MOVES_FIELD_WIDTH = 16
 
+def generate_move_names_with_shortcut_hints() -> str:
+    move_names = []
+    for abbr, full_move_name in ABBREVIATIONS.items():
+        move_names.append(f'({abbr}){full_move_name[len(abbr):]}')
+    return ', '.join(move_names)
+
+MOVE_NAMES_WITH_SHORTCUT_HINTS = generate_move_names_with_shortcut_hints()
+
 def prompt(message: str) -> None:
     print(f'==> {message}')
 
@@ -44,16 +52,10 @@ def display_rules() -> None:
     draw_horizontal_border()
 
 def get_user_move() -> str:
-    def generate_move_names_with_shortcut_hints() -> str:
-        move_names = []
-        for abbr, full_move_name in ABBREVIATIONS.items():
-            move_names.append(f'({abbr}){full_move_name[len(abbr):]}')
-        return ', '.join(move_names)
 
-    move_names_with_shortcut_hints = generate_move_names_with_shortcut_hints()
 
     while True:
-        prompt(f"Choose your move: {move_names_with_shortcut_hints}")
+        prompt(f"Choose your move: {MOVE_NAMES_WITH_SHORTCUT_HINTS}")
         user_input = input().strip().lower()
 
         if user_input in ABBREVIATIONS:
