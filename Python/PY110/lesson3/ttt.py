@@ -37,7 +37,10 @@ ROUND_LIMIT = 5
 PLAYER = 'player'
 COMPUTER = 'computer'
 
-NEGAMAX_MIN = -1000 # arbitrarily chosen initial value
+# arbitrarily chosen initial values for minimax
+MINIMAX_MIN = -1000
+ALPHA_INITIAL = -1000
+BETA_INITIAL = 1000
 
 # constants for game state dict keys
 PLAYER_MARKER = 'player_marker'
@@ -238,6 +241,19 @@ def get_other_marker(marker: str) -> str:
 def get_available_squares(board: Board) -> tuple[str, ...]:
     return tuple(square_num for square_num in board if board[square_num] == INITIAL_MARKER)
 
+def get_available_squares_ordered_for_pruning(board: Board) -> tuple[str, ...]:
+    def ordering_heuristics(square: str):
+        if square in CORNER_SQUARES or square == CENTER_SQUARE:
+            return 2
+        else:
+            return 1
+
+    # shuffle available squares so that minimax algorithm doesn't always pick the earlier numbers
+    available_squares = list(get_available_squares(board))
+    random.shuffle(available_squares)
+    available_squares.sort(key=ordering_heuristics, reverse=True) # sort by heuristic values
+    return tuple(available_squares)
+
 def find_critical_square(board: Board, square_nums: tuple[str, str, str], marker: str) -> str | None:
     mapped_line = tuple(board[square_num] for square_num in square_nums)
 
@@ -267,15 +283,16 @@ def get_computer_move_normal(board: Board, game_state: GameState) -> str:
         if winning_square: # return winning square immediately if found
             return winning_square
 
-        # save loss preventing square in case no winning square is found
-        loss_preventing_square = find_critical_square(board, square_nums, player_marker)
+        # search for loss preventing square in case no winning square is found
+        if loss_preventing_square is None:
+            loss_preventing_square = find_critical_square(board, square_nums, player_marker)
 
     return loss_preventing_square or random_square
 
-def get_negamax_value(board: Board, game_state: GameState, moves_remaining: int, is_computer_turn: bool) -> int:
+def get_minimax_value(board: Board, game_state: GameState, moves_remaining: int, alpha: int, beta: int, is_computer_turn: bool) -> int:
     computer_marker = game_state[COMPUTER_MARKER]
     player_marker = game_state[PLAYER_MARKER]
-    available_squares = get_available_squares(board)
+    available_squares = get_available_squares_ordered_for_pruning(board)
     winner_marker = get_winning_marker(board)
 
     multiplier = 1 if is_computer_turn else -1
@@ -288,39 +305,50 @@ def get_negamax_value(board: Board, game_state: GameState, moves_remaining: int,
         else:
             return 0
 
-    best_value = NEGAMAX_MIN # arbitrarily chosen initial negative value
+    best_value = MINIMAX_MIN # arbitrarily chosen initial negative value
 
     for square in available_squares:
         current_marker = computer_marker if is_computer_turn else player_marker
         board[square] = current_marker
 
-        current_value = -get_negamax_value(board, game_state, moves_remaining - 1, not is_computer_turn)
+        current_value = -get_minimax_value(board, game_state, moves_remaining - 1, -beta, -alpha, not is_computer_turn)
+
+        board[square] = INITIAL_MARKER
 
         if current_value > best_value:
             best_value = current_value
+        
+        if best_value > alpha:
+            alpha = best_value
 
-        board[square] = INITIAL_MARKER
+        if alpha >= beta:
+            break
 
     return best_value
 
 def get_computer_move_minimax(board: Board, game_state: GameState) -> str:
-    available_squares = get_available_squares(board)
+    available_squares = get_available_squares_ordered_for_pruning(board)
     moves_remaining = len(available_squares)
 
-    best_value = NEGAMAX_MIN # arbitrarily chosen initial negative value
+    best_value = MINIMAX_MIN # arbitrarily chosen initial negative value
     best_square = available_squares[0] # arbitrary initial value
+    alpha = ALPHA_INITIAL
+    beta = BETA_INITIAL
 
     for square in available_squares:
         board[square] = game_state[COMPUTER_MARKER]
 
-        current_value = -get_negamax_value(board, game_state, moves_remaining - 1, is_computer_turn=False)
-        
+        current_value = -get_minimax_value(board, game_state, moves_remaining - 1, -beta, -alpha, is_computer_turn=False)
+
+        board[square] = INITIAL_MARKER
+
         if current_value > best_value:
             best_value = current_value
             best_square = square
 
-        board[square] = INITIAL_MARKER
-    
+        if current_value > alpha:
+            alpha = current_value
+
     return best_square
 
 def get_computer_square_choice(board: Board, game_state: GameState) -> str:
