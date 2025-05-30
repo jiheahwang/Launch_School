@@ -1,3 +1,12 @@
+"""
+Tic Tac Toe - player vs. computer
+
+Includes:
+- Configurable board layout (numpad/default)
+- Score keeping
+- Two difficulty levels including unbeatable AI (Negamax + alpha-beta pruning)
+"""
+
 import os       # for screen clearing
 import time     # for sleep
 import random
@@ -13,7 +22,7 @@ class GameState(TypedDict):
     first_move_marker: str
     current_marker: str
     numpad_mode: bool
-    minimax_mode: bool
+    negamax_mode: bool
     current_round: int
     total_rounds: int
     player_score: int
@@ -37,15 +46,15 @@ ROUND_LIMIT = 5
 PLAYER = 'player'
 COMPUTER = 'computer'
 
-# arbitrarily chosen initial values for minimax
-MINIMAX_MIN = -1000
+# arbitrarily chosen initial values for negamax
+NEGAMAX_MIN = -1000
 ALPHA_INITIAL = -1000
 BETA_INITIAL = 1000
 
 # constants for game state dict keys
 PLAYER_MARKER = 'player_marker'
 COMPUTER_MARKER = 'computer_marker'
-MINIMAX_MODE = 'minimax_mode'
+NEGAMAX_MODE = 'negamax_mode'
 PLAYER_SCORE = 'player_score'
 COMPUTER_SCORE = 'computer_score'
 CURRENT_ROUND = 'current_round'
@@ -79,16 +88,23 @@ Press Enter to continue.
     input()
 
 def display_game_screen(board: Board, game_state: GameState) -> None:
-    def square_number(position: str) -> str:
+    def square_num(position: str) -> str:
         return position if board[position] == INITIAL_MARKER else " "
 
     def display_row(sq1: str, sq2: str, sq3: str) -> None:
         print('     |     |')
         print(f"  {board[sq1]}  |  {board[sq2]}  |  {board[sq3]}")
-        print(f"    {square_number(sq1)}|    {square_number(sq2)}|    {square_number(sq3)}")
+        print(f"    {square_num(sq1)}|    {square_num(sq2)}|    {square_num(sq3)}") # pylint: disable=line-too-long
 
     numpad_mode = game_state[NUMPAD_MODE]
-    if game_state[CURRENT_ROUND] <= game_state[TOTAL_ROUNDS]:
+    current_round = game_state[CURRENT_ROUND]
+    total_rounds = game_state[TOTAL_ROUNDS]
+    player_marker = game_state[PLAYER_MARKER]
+    computer_marker = game_state[COMPUTER_MARKER]
+    player_score = game_state[PLAYER_SCORE]
+    computer_score = game_state[COMPUTER_SCORE]
+
+    if current_round <= total_rounds:
         extra_str = " "
     else:
         extra_str = "(EXTRA ROUND!)"
@@ -97,19 +113,25 @@ def display_game_screen(board: Board, game_state: GameState) -> None:
     print(f"""
 ***||  Let's Play TIC TAC TOE  ||***
 ====================================
-| MARKERS |  You: {game_state[PLAYER_MARKER]}  |  Computer: {game_state[COMPUTER_MARKER]}
+| MARKERS |  You: {player_marker}  |  Computer: {computer_marker}
 ------------------------------------
-| SCORES  |  You: {game_state[PLAYER_SCORE]}  |  Computer: {game_state[COMPUTER_SCORE]}
+| SCORES  |  You: {player_score}  |  Computer: {computer_score}
 ====================================
-        ROUND {game_state[CURRENT_ROUND]} of {game_state[TOTAL_ROUNDS]} {extra_str}
+        ROUND {current_round} of {total_rounds} {extra_str}
 ====================================""")
 
     print('')
-    display_row('7','8','9') if numpad_mode else display_row('1','2','3')
+    if numpad_mode:
+        display_row('7','8','9')
+    else:
+        display_row('1','2','3')
     print('-----+-----+-----')
     display_row('4','5','6')
     print('-----+-----+-----')
-    display_row('1','2','3') if numpad_mode else display_row('7','8','9')
+    if numpad_mode:
+        display_row('1','2','3')
+    else:
+        display_row('7','8','9')
     print('')
 
 def display_next_round_countdown() -> None:
@@ -121,7 +143,8 @@ def display_next_round_countdown() -> None:
         print(f'{num}..')
         pause()
 
-def display_round_result(winning_marker: str | None, game_state: GameState) -> None:
+def display_round_result(
+        winning_marker: str | None, game_state: GameState) -> None:
     if winning_marker == game_state[PLAYER_MARKER]:
         print('You won!')
     elif winning_marker == game_state[COMPUTER_MARKER]:
@@ -142,11 +165,16 @@ def join_or(available_options: tuple[str, ...]) -> str:
 
     return f'{", ".join(available_options[:-1])}, or {available_options[-1]}'
 
-def get_valid_user_input(message: str, valid_options: tuple[str, ...], screen_clearing: bool = True) -> str:
+def get_valid_user_input(
+        message: str,
+        valid_options: tuple[str, ...],
+        screen_clearing: bool = True
+        ) -> str:
     user_input = ""
     valid_options_str = join_or(valid_options)
 
-    if screen_clearing: clear_screen()
+    if screen_clearing:
+        clear_screen()
 
     while user_input not in valid_options:
         print(message)
@@ -155,7 +183,8 @@ def get_valid_user_input(message: str, valid_options: tuple[str, ...], screen_cl
         if user_input in valid_options:
             return user_input
 
-        if screen_clearing: clear_screen()
+        if screen_clearing:
+            clear_screen()
         print(f'Invalid input. Please enter {valid_options_str}.\n')
 
     raise RuntimeError("unreachable") # to satisfy the type checker
@@ -164,19 +193,21 @@ def get_player_marker() -> str:
     message = "Choose your marker."
     return get_valid_user_input(message, MARKERS)
 
-def ask_use_minimax() -> bool:
+def ask_use_negamax() -> bool:
+    # pylint: disable=invalid-name
     USE_NORMAL_AI = '1'
-    USE_MINIMAX = '2'
+    USE_NEGAMAX = '2'
+    # pylint: enable=invalid-name
 
     message = '''
 Which difficulty mode do you want to play?
 1. Normal
 2. Impossible (you cannot beat the computer in this mode)
     '''
-    valid_options = (USE_NORMAL_AI, USE_MINIMAX)
+    valid_options = (USE_NORMAL_AI, USE_NEGAMAX)
     user_input = get_valid_user_input(message, valid_options)
 
-    return user_input == USE_MINIMAX
+    return user_input == USE_NEGAMAX
 
 def get_round_count_choice() -> int:
     message = f'How many rounds do you want to play? Max {ROUND_LIMIT} rounds.'
@@ -206,7 +237,8 @@ def get_user_square_choice(board: Board) -> str:
 
 def ask_play_again(message: str = "Play again?") -> bool:
     valid_options = ('y', 'yes', 'n', 'no')
-    user_input = get_valid_user_input(message, valid_options, screen_clearing=False)
+    user_input = get_valid_user_input(
+        message, valid_options, screen_clearing=False)
     return user_input in ('y', 'yes')
 
 # game setup, states, and management
@@ -215,7 +247,7 @@ def initialize_game_state() -> GameState:
     computer_marker = get_other_marker(player_marker)
     first_move_marker = random.choice(MARKERS)
     numpad_mode = ask_use_numpad_layout()
-    minimax_mode = ask_use_minimax()
+    negamax_mode = ask_use_negamax()
     round_count = get_round_count_choice()
 
     return {
@@ -224,7 +256,7 @@ def initialize_game_state() -> GameState:
         FIRST_MOVE_MARKER: first_move_marker,
         CURRENT_MARKER: first_move_marker,
         NUMPAD_MODE: numpad_mode,
-        MINIMAX_MODE: minimax_mode,
+        NEGAMAX_MODE: negamax_mode,
         CURRENT_ROUND: 0,
         TOTAL_ROUNDS: round_count,
         PLAYER_SCORE: 0,
@@ -239,22 +271,24 @@ def get_other_marker(marker: str) -> str:
     return x if marker == o else o
 
 def get_available_squares(board: Board) -> tuple[str, ...]:
-    return tuple(square_num for square_num in board if board[square_num] == INITIAL_MARKER)
+    return tuple(square for square in board if board[square] == INITIAL_MARKER)
 
 def get_available_squares_ordered_for_pruning(board: Board) -> tuple[str, ...]:
     def ordering_heuristics(square: str):
-        if square in CORNER_SQUARES or square == CENTER_SQUARE:
-            return 2
-        else:
-            return 1
+        priority_squares = CORNER_SQUARES + tuple(CENTER_SQUARE)
+        return 2 if square in priority_squares else 1
 
-    # shuffle available squares so that minimax algorithm doesn't always pick the earlier numbers
+    # shuffle available squares so the earlier numbers don't always get picked
     available_squares = list(get_available_squares(board))
     random.shuffle(available_squares)
-    available_squares.sort(key=ordering_heuristics, reverse=True) # sort by heuristic values
+    available_squares.sort(key=ordering_heuristics, reverse=True)
     return tuple(available_squares)
 
-def find_critical_square(board: Board, square_nums: tuple[str, str, str], marker: str) -> str | None:
+def find_critical_square(
+        board: Board,
+        square_nums: tuple[str, str, str],
+        marker: str
+        ) -> str | None:
     mapped_line = tuple(board[square_num] for square_num in square_nums)
 
     # if there's no empty square, no critical square exists
@@ -266,33 +300,47 @@ def find_critical_square(board: Board, square_nums: tuple[str, str, str], marker
         target_index = mapped_line.index(INITIAL_MARKER)
         return square_nums[target_index]
 
+    return None
+
 def get_computer_move_normal(board: Board, game_state: GameState) -> str:
     computer_marker = game_state[COMPUTER_MARKER]
     player_marker = game_state[PLAYER_MARKER]
     available_squares = get_available_squares(board)
 
     # choose center square for first move if available
-    if (len(available_squares) >= TOTAL_NUMBER_OF_SQUARES - 1) and CENTER_SQUARE in available_squares:
+    if (
+        len(available_squares) >= TOTAL_NUMBER_OF_SQUARES - 1
+        and CENTER_SQUARE in available_squares
+    ):
         return CENTER_SQUARE
 
     loss_preventing_square = None
     random_square = random.choice(available_squares)
 
     for square_nums in WINNING_LINES:
-        winning_square = find_critical_square(board, square_nums, computer_marker)
+        winning_square = find_critical_square(
+            board, square_nums, computer_marker)
         if winning_square: # return winning square immediately if found
             return winning_square
 
         # search for loss preventing square in case no winning square is found
         if loss_preventing_square is None:
-            loss_preventing_square = find_critical_square(board, square_nums, player_marker)
+            loss_preventing_square = find_critical_square(
+                board, square_nums, player_marker)
 
     return loss_preventing_square or random_square
 
-def get_minimax_value(board: Board, game_state: GameState, moves_remaining: int, alpha: int, beta: int, is_computer_turn: bool) -> int:
+def get_negamax_value(
+        board: Board,
+        game_state: GameState,
+        alpha: int,
+        beta: int,
+        is_computer_turn: bool
+        ) -> int:
     computer_marker = game_state[COMPUTER_MARKER]
     player_marker = game_state[PLAYER_MARKER]
     available_squares = get_available_squares_ordered_for_pruning(board)
+    moves_remaining = len(available_squares)
     winner_marker = get_winning_marker(board)
 
     multiplier = 1 if is_computer_turn else -1
@@ -300,37 +348,34 @@ def get_minimax_value(board: Board, game_state: GameState, moves_remaining: int,
     if winner_marker or moves_remaining == 0:
         if winner_marker == computer_marker:
             return multiplier * (1 + moves_remaining)
-        elif winner_marker == player_marker:
+        if winner_marker == player_marker:
             return multiplier * (-1 * (1 + moves_remaining))
-        else:
+        if not winner_marker:
             return 0
 
-    best_value = MINIMAX_MIN # arbitrarily chosen initial negative value
+    best_value = NEGAMAX_MIN # arbitrarily chosen initial negative value
 
     for square in available_squares:
         current_marker = computer_marker if is_computer_turn else player_marker
         board[square] = current_marker
 
-        current_value = -get_minimax_value(board, game_state, moves_remaining - 1, -beta, -alpha, not is_computer_turn)
+        current_value = -get_negamax_value(
+            board, game_state, -beta, -alpha, not is_computer_turn)
 
         board[square] = INITIAL_MARKER
 
-        if current_value > best_value:
-            best_value = current_value
-        
-        if best_value > alpha:
-            alpha = best_value
+        best_value = max(best_value, current_value)
+        alpha = max(alpha, best_value)
 
         if alpha >= beta:
             break
 
     return best_value
 
-def get_computer_move_minimax(board: Board, game_state: GameState) -> str:
+def get_computer_move_negamax(board: Board, game_state: GameState) -> str:
     available_squares = get_available_squares_ordered_for_pruning(board)
-    moves_remaining = len(available_squares)
 
-    best_value = MINIMAX_MIN # arbitrarily chosen initial negative value
+    best_value = NEGAMAX_MIN # arbitrarily chosen initial negative value
     best_square = available_squares[0] # arbitrary initial value
     alpha = ALPHA_INITIAL
     beta = BETA_INITIAL
@@ -338,7 +383,8 @@ def get_computer_move_minimax(board: Board, game_state: GameState) -> str:
     for square in available_squares:
         board[square] = game_state[COMPUTER_MARKER]
 
-        current_value = -get_minimax_value(board, game_state, moves_remaining - 1, -beta, -alpha, is_computer_turn=False)
+        current_value = -get_negamax_value(
+            board, game_state, -beta, -alpha, is_computer_turn=False)
 
         board[square] = INITIAL_MARKER
 
@@ -346,14 +392,13 @@ def get_computer_move_minimax(board: Board, game_state: GameState) -> str:
             best_value = current_value
             best_square = square
 
-        if current_value > alpha:
-            alpha = current_value
+        alpha = max(alpha, current_value)
 
     return best_square
 
 def get_computer_square_choice(board: Board, game_state: GameState) -> str:
-    if game_state[MINIMAX_MODE]:
-        return get_computer_move_minimax(board, game_state)
+    if game_state[NEGAMAX_MODE]:
+        return get_computer_move_negamax(board, game_state)
 
     return get_computer_move_normal(board, game_state)
 
@@ -367,16 +412,16 @@ def get_winning_marker(board: Board) -> str | None:
 def get_grand_winner(game_state: GameState) -> str | None:
     if game_state[PLAYER_SCORE] > game_state[COMPUTER_SCORE]:
         return PLAYER
-    elif game_state[PLAYER_SCORE] < game_state[COMPUTER_SCORE]:
+    if game_state[PLAYER_SCORE] < game_state[COMPUTER_SCORE]:
         return COMPUTER
-    else:
-        return None
+    return None
 
 def is_board_full(board: Board) -> bool:
     return not bool(get_available_squares(board))
 
 def update_scores(winning_marker: str | None, game_state: GameState) -> None:
-    if not winning_marker: return
+    if not winning_marker:
+        return
 
     if winning_marker == game_state[PLAYER_MARKER]:
         game_state[PLAYER_SCORE] += 1
@@ -384,13 +429,16 @@ def update_scores(winning_marker: str | None, game_state: GameState) -> None:
         game_state[COMPUTER_SCORE] += 1
 
 def switch_first_move_player(game_state: GameState) -> None:
-    game_state[FIRST_MOVE_MARKER] = get_other_marker(game_state[FIRST_MOVE_MARKER])
-    game_state[CURRENT_MARKER] = game_state[FIRST_MOVE_MARKER]
+    other_marker = get_other_marker(game_state[FIRST_MOVE_MARKER])
+    game_state[FIRST_MOVE_MARKER] = other_marker
+    game_state[CURRENT_MARKER] = other_marker
 
 def reset_game(game_state: GameState) -> GameState:
+    # pylint: disable=invalid-name
     KEEP_SETTINGS = "1"
     CHANGE_DIFFICULTY = "2"
     CHANGE_ALL = "3"
+    # pylint: enable=invalid-name
 
     message = """
 For the new game, what would you like to do?
@@ -412,8 +460,8 @@ For the new game, what would you like to do?
     game_state[CURRENT_MARKER] = game_state[FIRST_MOVE_MARKER]
 
     if user_input == CHANGE_DIFFICULTY:
-        game_state[MINIMAX_MODE] = ask_use_minimax()
-    
+        game_state[NEGAMAX_MODE] = ask_use_negamax()
+
     return game_state
 
 # game rounds and loops
@@ -448,11 +496,11 @@ def play_one_round(game_state: GameState) -> None:
             break
 
 def play_all_rounds(game_state: GameState) -> None:
-    for round in range(1, game_state[TOTAL_ROUNDS] + 1):
+    for current_round in range(1, game_state[TOTAL_ROUNDS] + 1):
         play_one_round(game_state)
 
         # if round is not the final round
-        if round != game_state[TOTAL_ROUNDS]:
+        if current_round != game_state[TOTAL_ROUNDS]:
             display_next_round_countdown()
             switch_first_move_player(game_state)
 
@@ -462,7 +510,7 @@ def play_until_grand_winner(game_state: GameState) -> None:
         if grand_winner:
             display_grand_winner(grand_winner)
             return
-        
+
         print("No grand winner yet.")
         message = "Play more rounds until a grand winner can be determined?"
         if ask_play_again(message):
@@ -478,7 +526,7 @@ def play_ttt():
 
     while True:
         play_all_rounds(game_state)
-        play_until_grand_winner(game_state) # optional extra rounds in case of no grand winner
+        play_until_grand_winner(game_state) # optional extra rounds
         if ask_play_again():
             print("Let's play again!")
             pause(1)
